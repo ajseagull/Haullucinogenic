@@ -1,6 +1,4 @@
 local DrugActive = false
-local muted = false
-local invisible = false
 
 local attackers = nil
 
@@ -57,19 +55,6 @@ local function SpawnPed()
                     end
                 end
             end
-
-            SetTimeout(2500, function()
-                DrugActive = false
-                for _, player in ipairs(GetActivePlayers()) do
-                    local players = GetPlayerPed(player)
-                    local OtherPlayers = GetPlayerPed(player)
-                    if OtherPlayers ~= ped then
-                        SetEntityVisible(players, true)
-                    end
-                end
-                DeletePed(attackers)
-                local ped = PlayerPedId()
-            end)
         end
     end)
 end
@@ -95,15 +80,4 @@ RegisterCommand('drug', function()
     local ped = PlayerPedId()
     DrugActive = true
     SpawnPed()
-end)
-
-RegisterNetEvent('cvt-drug:setinvisible', function(player)
-    local ped = PlayerPedId()
-    for _, player in ipairs(GetActivePlayers()) do
-        local OtherPlayers = GetPlayerPed(player)
-        if OtherPlayers ~= ped then
-            exports["pma-voice"]:toggleMutePlayer(OtherPlayers, true)
-            SetEntityVisible(OtherPlayers, false)
-        end
-    end
 end)
