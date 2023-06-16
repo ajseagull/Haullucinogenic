@@ -79,7 +79,7 @@ local function SpawnPed()
             AddRelationshipGroup("LSDEnemies")
             AddRelationshipGroup("LSDUser")
             SetPedAsGroupLeader(ped, "LSDUser")
-            Wait(2000)
+            Wait(6500)
             if PedAmount <= Config.MaxPeds then
                 attackers = CreatePed(1, hash, playerCoords.x - math.random(15, 150), playerCoords.y - math.random(15, 150), playerCoords.z - 1, heading, false, true)
                 table.insert(attackersTable, attackers)
@@ -105,7 +105,7 @@ local function SetVisibilty()
     local playersToContact = {}
 
     for _, player in ipairs(GetActivePlayers()) do
-        local pedID = GetPlayerServerId(ped)
+        local pedID = GetPlayerServerId(source)
         local players = GetPlayerPed(player)
         local OtherPlayers = GetPlayerServerId(player)
 
@@ -130,7 +130,7 @@ local function SetVisibilty()
 
             if LastSeeTimer >= Config.HowLongToSee then
                 GetPlayersInRadius(10)
-                for _, player in ipairs(GetActivePlayers()) do
+                for _, player in ipairs(playersTable) do
                     if not randomPlayerFound then
                         TriggerServerEvent('cvt-drug:GetPlayerID')
                         randomPlayerFound = true
@@ -149,7 +149,6 @@ function GetDistanceBetweenCoords(x1, y1, z1, x2, y2, z2)
 end
 
 function GetPlayersInRadius(radius)
-    local players = {}
     local playerPed = PlayerPedId()
     local playerCoords = GetEntityCoords(playerPed)
 
@@ -163,7 +162,7 @@ function GetPlayersInRadius(radius)
             )
 
             if distance <= radius then
-                table.insert(players, player)
+                table.insert(playersTable, player)
             end
         end
     end
