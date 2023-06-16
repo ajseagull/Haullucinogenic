@@ -21,7 +21,9 @@ local function ResetStatus()
         local players = GetPlayerPed(player)
         local OtherPlayers = GetPlayerServerId(player)
         if OtherPlayers ~= ped then
-            exports["pma-voice"]:toggleMutePlayer(OtherPlayers)
+            for _, playerID in ipairs(GetActivePlayers()) do
+                exports["pma-voice"]:toggleMutePlayer(playerID)
+            end
         end
         SetEntityVisible(players, true, 0)
         for _, attacker in ipairs(attackersTable) do
@@ -78,49 +80,60 @@ local function SpawnPed()
             AddRelationshipGroup("LSDUser")
             SetPedAsGroupLeader(ped, "LSDUser")
             Wait(2000)
-            attackers = CreatePed(1, hash, playerCoords.x - math.random(1, 5), playerCoords.y - math.random(1, 5), playerCoords.z - 1, heading, false, true)
-            table.insert(attackersTable, attackers)
-            UseParticleFxAssetNextCall(dict)
-            local attackersCoords = GetEntityCoords(attackers)
-            local particle = StartParticleFxLoopedOnEntity(particleName, attackers, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, false, false, false)
-            SetPedAsGroupMember(attackers, "LSDEnemies")
-            SetRelationshipBetweenGroups(5, GetHashKey("LSDEnemies"), GetHashKey("LSDUser"))
-            SetRelationshipBetweenGroups(5, GetHashKey("LSDUser"), GetHashKey("LSDEnemies"))
-            TaskCombatPed(attackers, ped, 0, 16)
-            PedAmount = PedAmount + 1
-            SetTimeout(1750, function()
-                RemoveParticleFx(particle, false)
-            end)
+            if PedAmount <= Config.MaxPeds then
+                attackers = CreatePed(1, hash, playerCoords.x - math.random(15, 150), playerCoords.y - math.random(15, 150), playerCoords.z - 1, heading, false, true)
+                table.insert(attackersTable, attackers)
+                UseParticleFxAssetNextCall(dict)
+                local attackersCoords = GetEntityCoords(attackers)
+                local particle = StartParticleFxLoopedOnEntity(particleName, attackers, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, false, false, false)
+                SetPedAsGroupMember(attackers, "LSDEnemies")
+                SetRelationshipBetweenGroups(5, GetHashKey("LSDEnemies"), GetHashKey("LSDUser"))
+                SetRelationshipBetweenGroups(5, GetHashKey("LSDUser"), GetHashKey("LSDEnemies"))
+                TaskCombatPed(attackers, ped, 0, 16)
+                PedAmount = PedAmount + 1
+                SetTimeout(1750, function()
+                    RemoveParticleFx(particle, false)
+                end)
+            end
         end
     end)
 end
 
 local function SetVisibilty()
     local ped = PlayerPedId()
-    invisible = true
+    local invisible = true
+    local playersToContact = {}
+
     for _, player in ipairs(GetActivePlayers()) do
         local pedID = GetPlayerServerId(ped)
-        players = GetPlayerPed(player)
-        OtherPlayers = GetPlayerServerId(player)
-        if OtherPlayers ~= ped then
-            if players ~= ped then
-                while DrugActive and invisible do
-                    Wait(0)
-                    if not Muted then
-                        exports["pma-voice"]:toggleMutePlayer(OtherPlayers)
-                        Muted = true
-                    end
-                    SetEntityVisible(players, false, 0)
-                    LastSeeTimer = LastSeeTimer + 1
+        local players = GetPlayerPed(player)
+        local OtherPlayers = GetPlayerServerId(player)
 
-                    if LastSeeTimer >= Config.HowLongToSee then
-                        GetPlayersInRadius(10)
-                        for _, player in ipairs(GetActivePlayers()) do
-                            if not randomPlayerFound then
-                                TriggerServerEvent('cvt-drug:GetPlayerID')
-                                randomPlayerFound = true
-                            end
-                        end
+        if otherPlayers ~= pedID then
+            table.insert(playersToContact, OtherPlayers)
+        end
+
+        while DrugActive and invisible do
+            Wait(0)
+
+            for _, playerID in ipairs(GetActivePlayers()) do
+                exports["pma-voice"]:toggleMutePlayer(playerID)
+            end
+
+            for _, player in ipairs(GetActivePlayers()) do
+                local players = GetPlayerPed(player)
+                if players ~= ped then
+                    SetEntityVisible(players, false, 0)
+                end
+            end
+                LastSeeTimer = LastSeeTimer + 1
+
+            if LastSeeTimer >= Config.HowLongToSee then
+                GetPlayersInRadius(10)
+                for _, player in ipairs(GetActivePlayers()) do
+                    if not randomPlayerFound then
+                        TriggerServerEvent('cvt-drug:GetPlayerID')
+                        randomPlayerFound = true
                     end
                 end
             end
@@ -162,8 +175,6 @@ RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
     invisible = false
     while not invisible do
         Wait(0)
-        print('1')
-        Muted = false
         exports["pma-voice"]:toggleMutePlayer(player)
         SetEntityVisible(player, true, 0)
         LastSeeTimer = 0
