@@ -133,16 +133,18 @@ local function SetVisibilty()
 
         for _, player in ipairs(players) do
             local OtherPlayers = GetPlayerServerId(player)
+            
             if OtherPlayers ~= ped then
                 MutePlayer(OtherPlayers)
             end
+
             ChangePlayerAlpha(player)
         end
 
         LastSeeTimer = LastSeeTimer + 1
 
         if LastSeeTimer >= Config.HowLongToSee then
-            local PlayerRadius = GetPlayersInRadius(20)
+            local PlayerRadius = GetPlayersInRadius(10)
             for _, player in ipairs(PlayerRadius) do
                 if not randomPlayerFound then
                     TriggerServerEvent('cvt-drug:GetPlayerID', player)
@@ -183,9 +185,19 @@ RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
     while not invisible do
         Wait(0)
 
-        MutePlayer(player)
-        ChangePlayerAlpha(player)
+        local playersRadius = GetPlayersInRadius(50)
 
+        for _, players in ipairs(playersRadius) do
+            local OtherPlayers = GetPlayerServerId(players)
+            
+            if player ~= players then
+                MutePlayer(OtherPlayers)
+                ChangePlayerAlpha(players)
+            else
+                MutePlayer(player)
+                ChangePlayerAlpha(player)
+            end
+        end
         LastSeeTimer = 0
         Wait(4500)
         randomPlayerFound = false
