@@ -46,6 +46,7 @@ local function ChangePlayerAlpha(playerid)
 end
 
 local function ResetStatus()
+    local ped = PlayerPedId()
     local players = GetPlayersInRadius(50)
     for _, player in ipairs(players) do
         local OtherPlayers = GetPlayerServerId(player)
@@ -58,25 +59,24 @@ local function ResetStatus()
         DeletePed(attacker)
         table.remove(attackersTable, i)
     end
-    SetPedIsDrunk(GetPlayerPed(-1), false)
-    SetPedMotionBlur(playerPed, false)
+    SetPedIsDrunk(ped, false)
+    SetPedMotionBlur(ped, false)
     AnimpostfxStopAll()
     SetTimecycleModifierStrength(0.0)
     Wait(1500)
 end
 
 local function SpawnPed()
+    local ped = PlayerPedId()
+    SetPedMotionBlur(ped, true)
+    SetPedIsDrunk(ped, true)
+    AnimpostfxPlay("Rampage", 10000001, true)
+    SetTimecycleModifier("spectator5")
     CreateThread(function()
         while DrugActive do
-            local ped = PlayerPedId()
-            SetPedMotionBlur(ped, true)
-            SetPedIsDrunk(ped, true)
-            SetTimecycleModifier("spectator5")
-            AnimpostfxPlay("Rampage", 10000001, true)
-            MumbleSetVolumeOverrideByServerId(source, 0.0)
+
             local playerCoords = GetEntityCoords(ped)
             local heading = GetEntityHeading(ped)
-            local PedPool = GetGamePool('CPed')
             local models = {}
 
 
@@ -100,6 +100,7 @@ local function SpawnPed()
             if #attackersTable <= Config.MaxPeds then
                 attackers = CreatePed(1, hash, playerCoords.x - math.random(15, 150), playerCoords.y - math.random(15, 150), playerCoords.z - 1, heading, false, true)
                 table.insert(attackersTable, attackers)
+
                 alpha = 0
                 SetEntityAlpha(attackers, alpha, false)
                 while alpha < 255 do
@@ -107,11 +108,14 @@ local function SpawnPed()
                     alpha = alpha + 5
                     SetEntityAlpha(attackers, alpha, false)
                 end
+
                 SetPedAsGroupMember(attackers, "LSDEnemies")
+                SetRelationshipBetweenGroups(0, GetHashKey("LSDEnemies"), GetHashKey("LSDEnemies"))
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDEnemies"), GetHashKey("LSDUser"))
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDUser"), GetHashKey("LSDEnemies"))
                 TaskCombatPed(attackers, ped, 0, 16)
             end
+
             Wait(6500)
         end
     end)
@@ -122,6 +126,7 @@ local function SetVisibilty()
     local invisible = true
 
     while DrugActive and invisible do
+
         Wait(0)
 
         local players = GetPlayersInRadius(50)
@@ -156,8 +161,7 @@ function GetDistanceBetweenCoords(x1, y1, z1, x2, y2, z2)
 end
 
 function GetPlayersInRadius(radius)
-    local players = {}
-    local playerPed = GetPlayerPed(-1)
+    local playerPed = PlayerPedId()
     local playerCoords = GetEntityCoords(playerPed)
 
     for _, player in ipairs(GetActivePlayers()) do
@@ -166,7 +170,7 @@ function GetPlayersInRadius(radius)
         local distance = #(playerCoords - targetCoords)
 
         if distance <= radius and playerPed ~= targetPed then
-            table.insert(players, player)
+            table.insert(playersTable, player)
         end
     end
 
@@ -178,13 +182,10 @@ RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
     invisible = false
     while not invisible do
         Wait(0)
-        exports["pma-voice"]:toggleMutePlayer(player)
-        alpha = 0
-        while alpha < 255 do
-            Wait(15)
-            alpha = alpha + 5
-            SetEntityAlpha(player, alpha, false)
-        end
+
+        MutePlayer(player)
+        ChangePlayerAlpha(player)
+
         LastSeeTimer = 0
         Wait(4500)
         randomPlayerFound = false
