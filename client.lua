@@ -4,15 +4,9 @@ local attackers = nil
 local attackersTable = {}
 local playersTable = {}
 
-local PedAmount = 0
-
 local randomPlayerFound = false
-local dict = "core"
-local particleName = "ent_amb_smoke_foundry"
 
 local invisible = false
-
-local loop = false
 
 local LastSeeTimer = 0
 
@@ -25,26 +19,27 @@ local function ResetStatus()
                 exports["pma-voice"]:toggleMutePlayer(playerID)
             end
         end
-        SetEntityVisible(players, true, 0)
-        for _, attacker in ipairs(attackersTable) do
-            DeletePed(attacker)
+        alpha = 0
+        while alpha <= 255 do
+            Wait(15)
+            alpha = alpha + 5
+            SetEntityAlpha(players, alpha, false)
         end
+    end
+    for i, attacker in ipairs(attackersTable) do
+        DeletePed(attacker)
+        table.remove(attackersTable, i)
     end
     SetPedIsDrunk(GetPlayerPed(-1), false)
     SetPedMotionBlur(playerPed, false)
     AnimpostfxStopAll()
     SetTimecycleModifierStrength(0.0)
     Wait(1500)
-    for _, attacker in ipairs(attackersTable) do
-        DeletePed(attacker)
-    end
 end
 
 local function SpawnPed()
     CreateThread(function()
         while DrugActive do
-            Wait(0)
-            
             local ped = PlayerPedId()
             SetPedMotionBlur(ped, true)
             SetPedIsDrunk(ped, true)
@@ -56,11 +51,6 @@ local function SpawnPed()
             local PedPool = GetGamePool('CPed')
             local models = {}
 
-
-            RequestNamedPtfxAsset(dict)
-            while not HasNamedPtfxAssetLoaded(dict) do
-                Citizen.Wait(0)
-            end
 
             for key, value in pairs(Config.PedModels) do
                 table.insert(models, value[1])
@@ -79,22 +69,22 @@ local function SpawnPed()
             AddRelationshipGroup("LSDEnemies")
             AddRelationshipGroup("LSDUser")
             SetPedAsGroupLeader(ped, "LSDUser")
-            Wait(6500)
-            if PedAmount <= Config.MaxPeds then
+            if #attackersTable <= Config.MaxPeds then
                 attackers = CreatePed(1, hash, playerCoords.x - math.random(15, 150), playerCoords.y - math.random(15, 150), playerCoords.z - 1, heading, false, true)
                 table.insert(attackersTable, attackers)
-                UseParticleFxAssetNextCall(dict)
-                local attackersCoords = GetEntityCoords(attackers)
-                local particle = StartParticleFxLoopedOnEntity(particleName, attackers, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, false, false, false)
+                alpha = 0
+                SetEntityAlpha(attackers, alpha, false)
+                while alpha <= 255 do
+                    Wait(15)
+                    alpha = alpha + 5
+                    SetEntityAlpha(attackers, alpha, false)
+                end
                 SetPedAsGroupMember(attackers, "LSDEnemies")
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDEnemies"), GetHashKey("LSDUser"))
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDUser"), GetHashKey("LSDEnemies"))
                 TaskCombatPed(attackers, ped, 0, 16)
-                PedAmount = PedAmount + 1
-                SetTimeout(1750, function()
-                    RemoveParticleFx(particle, false)
-                end)
             end
+            Wait(6500)
         end
     end)
 end
@@ -123,7 +113,12 @@ local function SetVisibilty()
             for _, player in ipairs(GetActivePlayers()) do
                 local players = GetPlayerPed(player)
                 if players ~= ped then
-                    SetEntityVisible(players, false, 0)
+                    alpha = 255
+                    while alpha >= 0 do
+                        Wait(15)
+                        alpha = alpha - 5
+                        SetEntityAlpha(players, alpha, false)
+                    end
                 end
             end
                 LastSeeTimer = LastSeeTimer + 1
@@ -175,7 +170,12 @@ RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
     while not invisible do
         Wait(0)
         exports["pma-voice"]:toggleMutePlayer(player)
-        SetEntityVisible(player, true, 0)
+        alpha = 0
+        while alpha <= 255 do
+            Wait(15)
+            alpha = alpha + 5
+            SetEntityAlpha(player, alpha, false)
+        end
         LastSeeTimer = 0
         Wait(4500)
         randomPlayerFound = false
@@ -184,6 +184,24 @@ RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
     end
 end)
 
+AddEventHandler('entityDamaged', function(victim, attacker, weapon, baseDmg)
+    for i, npc in ipairs(attackersTable) do
+        if victim == npc then
+            if attacker == PlayerPedId() then
+                alpha = 255
+                while alpha >= 0 do
+                    Wait(15)
+                    alpha = alpha - 5
+                    SetEntityAlpha(victim, alpha, false)
+                end
+                DeletePed(victim)
+                table.remove(attackersTable, i)
+                print(#attackersTable)
+                break
+            end
+        end
+    end
+end)
 
 RegisterCommand('drugstop', function()
     if DrugActive then

@@ -1,12 +1,12 @@
 
 local IndexID = nil
 
-RegisterNetEvent('cvt-drug:GetPlayerID', function()
+RegisterNetEvent('prp-drug:GetPlayerID', function()
     local src = source
     local players = GetPlayers()
     local randomPlayer = GetRandomPlayer(players, src)
     if randomPlayer ~= -1 then
-        TriggerClientEvent('cvt-drug:SetPlayerVisibility', src, randomPlayer)
+        TriggerClientEvent('prp-drug:SetPlayerVisibility', src, randomPlayer)
     end
 end)
 
