@@ -1,11 +1,10 @@
 
 local IndexID = nil
 
-RegisterNetEvent('prp-drug:GetPlayerID', function()
+RegisterNetEvent('prp-drug:GetPlayerID', function(player)
     local src = source
-    local players = GetPlayers()
-    local randomPlayer = GetRandomPlayer(players, src)
-    if randomPlayer ~= -1 then
+    local randomPlayer = GetRandomPlayer(player, src)
+    if randomPlayer ~= GetPlayerPed(src) then
         TriggerClientEvent('prp-drug:SetPlayerVisibility', src, randomPlayer)
     end
 end)
