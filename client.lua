@@ -13,34 +13,30 @@ local invisible = false
 
 local LastSeeTimer = 0
 
+local PlayerAlpha = 255
+local EnemyAlpha = 255
+
 local function MutePlayer(playerid)
-    for _, player in ipairs(mutedTable) do
-        if not mutedTable[playerid] then
-            exports["pma-voice"]:toggleMutePlayer(playerid)
+    local ped = PlayerPedId()
+    if not mutedTable[playerid] then
+        if mutedTable[playerid] ~= ped then
             mutedTable[playerid] = true
-        else
-            exports["pma-voice"]:toggleMutePlayer(playerid)
-            mutedTable[playerid] = false
-        end
+            exports["pma-voice"]:toggleMutePlayer(mutedTable[playerid])
+        end 
     end
 end
 
 local function ChangePlayerAlpha(playerid)
-    for _, player in ipairs(invisbleTable) do
-        if not invisbleTable[playerid] then
-            while alpha > 0 do
-                Wait(15)
-                alpha = alpha - 5
-                SetEntityAlpha(players, alpha, false)
+    local player = GetPlayerPed(playerid)
+    local ped = PlayerPedId()
+    if not invisbleTable[playerid] then
+        if invisbleTable[playerid] ~= ped then
+            while PlayerAlpha >= 1 do
+                Wait(10)
+                PlayerAlpha = PlayerAlpha - 1
+                SetEntityAlpha(player, PlayerAlpha, false)
             end
             invisbleTable[playerid] = true
-        else
-            while alpha < 255 do
-                Wait(15)
-                alpha = alpha + 5
-                SetEntityAlpha(players, alpha, false)
-            end
-            invisbleTable[playerid] = false
         end
     end
 end
@@ -48,16 +44,30 @@ end
 local function ResetStatus()
     local ped = PlayerPedId()
     local players = GetPlayersInRadius(50)
-    for _, player in ipairs(players) do
-        local OtherPlayers = GetPlayerServerId(player)
-        if OtherPlayers ~= ped then
-            MutePlayer(OtherPlayers)
-        end
-        ChangePlayerAlpha(player)
-    end
+    DrugActive = false
     for i, attacker in ipairs(attackersTable) do
         DeletePed(attacker)
         table.remove(attackersTable, i)
+    end
+    for _, player in ipairs(players) do
+        local OtherPlayers = GetPlayerServerId(player)
+        local playerPed = GetPlayerPed(player)
+        if mutedTable[OtherPlayers] then
+            if mutedTable[OtherPlayers] ~= ped then
+                exports["pma-voice"]:toggleMutePlayer(mutedTable[OtherPlayers])
+                mutedTable[OtherPlayers] = false
+            end 
+        end
+        if invisbleTable[player] then
+            if invisbleTable[player] ~= ped then
+                while PlayerAlpha <= 254 do
+                    Wait(10)
+                    PlayerAlpha = PlayerAlpha + 1
+                    SetEntityAlpha(playerPed, PlayerAlpha, false)
+                    invisbleTable[player] = false
+                end
+            end
+        end
     end
     SetPedIsDrunk(ped, false)
     SetPedMotionBlur(ped, false)
@@ -98,22 +108,20 @@ local function SpawnPed()
             AddRelationshipGroup("LSDUser")
             SetPedAsGroupLeader(ped, "LSDUser")
             if #attackersTable <= Config.MaxPeds then
-                attackers = CreatePed(1, hash, playerCoords.x - math.random(15, 150), playerCoords.y - math.random(15, 150), playerCoords.z - 1, heading, false, true)
+                attackers = CreatePed(1, hash, playerCoords.x - math.random(1, 5), playerCoords.y - math.random(1, 5), playerCoords.z - 1, heading, false, true)
                 table.insert(attackersTable, attackers)
-
-                alpha = 0
-                SetEntityAlpha(attackers, alpha, false)
-                while alpha < 255 do
-                    Wait(15)
-                    alpha = alpha + 5
-                    SetEntityAlpha(attackers, alpha, false)
-                end
-
                 SetPedAsGroupMember(attackers, "LSDEnemies")
                 SetRelationshipBetweenGroups(0, GetHashKey("LSDEnemies"), GetHashKey("LSDEnemies"))
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDEnemies"), GetHashKey("LSDUser"))
                 SetRelationshipBetweenGroups(5, GetHashKey("LSDUser"), GetHashKey("LSDEnemies"))
                 TaskCombatPed(attackers, ped, 0, 16)
+                EnemyAlpha = 0
+                SetEntityAlpha(attackers, EnemyAlpha, false)
+                while EnemyAlpha <= 254 do
+                    Wait(10)
+                    EnemyAlpha = EnemyAlpha + 1
+                    SetEntityAlpha(attackers, EnemyAlpha, false)
+                end
             end
 
             Wait(6500)
@@ -124,34 +132,37 @@ end
 local function SetVisibilty()
     local ped = PlayerPedId()
     local invisible = true
+    LastSeeTimer = 0
 
     while DrugActive and invisible do
 
-        Wait(0)
+        local players = GetPlayersInRadius(100.0)
 
-        local players = GetPlayersInRadius(50)
+        local PlayerList = {}
 
-        for _, player in ipairs(players) do
+        for _, player in pairs(players) do
             local OtherPlayers = GetPlayerServerId(player)
             
             if OtherPlayers ~= ped then
                 MutePlayer(OtherPlayers)
             end
-
             ChangePlayerAlpha(player)
+
+            table.insert(PlayerList, OtherPlayers)
         end
 
-        LastSeeTimer = LastSeeTimer + 1
+        LastSeeTimer = LastSeeTimer + 1200
 
         if LastSeeTimer >= Config.HowLongToSee then
-            local PlayerRadius = GetPlayersInRadius(10)
+            local PlayerRadius = GetPlayersInRadius(10.0)
             for _, player in ipairs(PlayerRadius) do
                 if not randomPlayerFound then
-                    TriggerServerEvent('cvt-drug:GetPlayerID', player)
+                    TriggerServerEvent('prp-drug:GetPlayerID', PlayerList)
                     randomPlayerFound = true
                 end
             end
         end
+        Wait(6500)
     end
 end
 
@@ -176,33 +187,41 @@ function GetPlayersInRadius(radius)
         end
     end
 
-    return players
+    return playersTable
 end
 
 
-RegisterNetEvent('cvt-drug:SetPlayerVisibility', function(player)
-    invisible = false
-    while not invisible do
-        Wait(0)
-
-        local playersRadius = GetPlayersInRadius(50)
-
-        for _, players in ipairs(playersRadius) do
-            local OtherPlayers = GetPlayerServerId(players)
-            
-            if player ~= players then
-                MutePlayer(OtherPlayers)
-                ChangePlayerAlpha(players)
-            else
-                MutePlayer(player)
-                ChangePlayerAlpha(player)
-            end
+RegisterNetEvent('prp-drug:SetPlayerVisibility', function(player)
+    local ped = PlayerPedId()
+    local playerId = GetPlayerFromServerId(player)
+    local playerPed = GetPlayerPed(playerId)
+    local ran = false
+    if not ran then
+        print(mutedTable[player])
+        if mutedTable[player] then
+            if mutedTable[player] ~= ped then
+                exports["pma-voice"]:toggleMutePlayer(mutedTable[player])
+                mutedTable[player] = false
+            end 
+        end
+        PlayerAlpha = 1
+        print(playerPed)
+        while PlayerAlpha <= 254 do
+            Wait(10)
+            PlayerAlpha = PlayerAlpha + 1
+            SetEntityAlpha(playerPed, PlayerAlpha, false)
+            invisbleTable[player] = false
         end
         LastSeeTimer = 0
-        Wait(4500)
+        ran = true
+        Wait(1500)
         randomPlayerFound = false
-        LastSeeTimer = 0
-        SetVisibilty()
+        while PlayerAlpha >= 1 do
+            Wait(10)
+            PlayerAlpha = PlayerAlpha - 1
+            SetEntityAlpha(playerPed, PlayerAlpha, false)
+            invisbleTable[player] = false
+        end
     end
 end)
 
@@ -210,15 +229,17 @@ AddEventHandler('entityDamaged', function(victim, attacker, weapon, baseDmg)
     for i, npc in ipairs(attackersTable) do
         if victim == npc then
             if attacker == PlayerPedId() then
-                alpha = 255
-                while alpha > 0 do
-                    Wait(15)
-                    alpha = alpha - 5
-                    SetEntityAlpha(victim, alpha, false)
+                local VictimAlpha = 255
+                while VictimAlpha >= 1 do
+                    Wait(10)
+                    VictimAlpha = VictimAlpha - 1
+                    SetEntityAlpha(victim, VictimAlpha, false)
                 end
-                DeletePed(victim)
-                table.remove(attackersTable, i)
-                print(#attackersTable)
+                local CurrentAlpha = GetEntityAlpha(victim)
+                if CurrentAlpha <= 0 then
+                    DeletePed(victim)
+                    table.remove(attackersTable, i)
+                end
                 break
             end
         end
@@ -227,7 +248,6 @@ end)
 
 RegisterCommand('drugstop', function()
     if DrugActive then
-        DrugActive = false
         ResetStatus()
     end
 end)
@@ -236,6 +256,7 @@ RegisterCommand('drug', function()
     if not DrugActive then
         DrugActive = true
         SpawnPed()
+        
         SetVisibilty()
     end
 end)
