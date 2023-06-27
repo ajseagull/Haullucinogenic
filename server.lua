@@ -4,10 +4,8 @@ local IndexID = nil
 RegisterNetEvent('prp-drug:GetPlayerID', function(player)
     local src = source
     local randomPlayer = GetRandomPlayer(player, src)
-    print(randomPlayer)
     if randomPlayer ~= GetPlayerPed(src) then
         TriggerClientEvent('prp-drug:SetPlayerVisibility', src, randomPlayer)
-        print(randomPlayer)
     end
 end)
 

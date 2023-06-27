@@ -197,7 +197,6 @@ RegisterNetEvent('prp-drug:SetPlayerVisibility', function(player)
     local playerPed = GetPlayerPed(playerId)
     local ran = false
     if not ran then
-        print(mutedTable[player])
         if mutedTable[player] then
             if mutedTable[player] ~= ped then
                 exports["pma-voice"]:toggleMutePlayer(mutedTable[player])
@@ -205,7 +204,6 @@ RegisterNetEvent('prp-drug:SetPlayerVisibility', function(player)
             end 
         end
         PlayerAlpha = 1
-        print(playerPed)
         while PlayerAlpha <= 254 do
             Wait(10)
             PlayerAlpha = PlayerAlpha + 1
